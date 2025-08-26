@@ -166,9 +166,9 @@ export default function PixelCanvas() {
         />
       </div>
 
-      <div className="relative w-full max-w-2xl aspect-square border-4 border-gray-800 shadow-2xl bg-gray-900 overflow-hidden">
+      <div className="relative w-full max-w-2xl aspect-square border-4 border-gray-800 shadow-2xl bg-black overflow-hidden">
         {/* Logo Overlay */}
-        <div className="absolute inset-0 flex items-center justify-center opacity-90 pointer-events-none">
+        <div className="absolute inset-0 flex items-center justify-center opacity-50 pointer-events-none">
           <Image
             src="/coding-club-logo-mask.png"
             alt="Coding Club Logo"
@@ -220,6 +220,7 @@ export default function PixelCanvas() {
                 isPlaced={!!pixel}
                 onClick={handlePlacePixel}
                 disabled={placedPixel || authLoading}
+                selectedColor={selectedColor}
               />
             );
           })}

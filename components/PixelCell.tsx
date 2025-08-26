@@ -10,6 +10,7 @@ type PixelCellProps = {
   isPlaced: boolean;
   onClick: (x: number, y: number) => void;
   disabled: boolean;
+  selectedColor: string;
 };
 
 export default function PixelCell({
@@ -19,6 +20,7 @@ export default function PixelCell({
   isPlaced,
   onClick,
   disabled,
+  selectedColor,
 }: PixelCellProps) {
   const [glow, setGlow] = useState(0);
   
@@ -37,9 +39,9 @@ export default function PixelCell({
   return (
     <div
       className={cn(
-        "aspect-square relative overflow-hidden group",
+        "aspect-square relative overflow-hidden group transition-all duration-300",
         {
-          "cursor-pointer hover:opacity-90": !disabled && !isPlaced,
+          "cursor-pointer hover:scale-105 hover:z-10": !disabled && !isPlaced,
           "opacity-95 hover:opacity-100": isPlaced,
         }
       )}
@@ -53,13 +55,23 @@ export default function PixelCell({
         zIndex: isPlaced ? 1 : 0,
       }}
     >
-      {/* Simple grid line */}
+      {/* Grid line with hover effect */}
       <div 
-        className="absolute inset-0 pointer-events-none"
+        className="absolute inset-0 pointer-events-none transition-all duration-300"
         style={{
           boxShadow: 'inset 0 0 0 1px rgba(255, 255, 255, 0.1)',
         }}
       />
+      {/* Hover glow effect */}
+      {!isPlaced && !disabled && (
+        <div 
+          className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+          style={{
+            background: `radial-gradient(circle at center, ${selectedColor || '#ffffff'}20 0%, transparent 80%)`,
+            boxShadow: `0 0 15px 2px ${selectedColor || '#ffffff'}40`,
+          }}
+        />
+      )}
       {/* Glow effect on hover */}
       {!isPlaced && (
         <div 
