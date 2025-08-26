@@ -32,12 +32,56 @@ const REVEAL_THRESHOLD = 300;
 
 export default function PixelCanvas() {
   const [pixels, setPixels] = useState<Record<string, Pixel>>({});
-  const [placedPixel, setPlacedPixel] = useState<boolean>(false);
-  const [selectedColor, setSelectedColor] = useState<string>("#000000");
+  const [selectedColor, setSelectedColor] = useState("#FF0000");
+  const [placedPixel, setPlacedPixel] = useState(false);
+  const { user, loading: authLoading } = useAuthAnonymously();
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [reveal, setReveal] = useState(false);
+  const [gridColors, setGridColors] = useState<string[][]>([]);
+  const [isAnimating, setIsAnimating] = useState(false);
   const [totalPlaced, setTotalPlaced] = useState(0);
   const [audienceCount, setAudienceCount] = useState(0);
   const [isRevealed, setIsRevealed] = useState(false);
-  const { user, loading: authLoading } = useAuthAnonymously();
+
+  // Generate random grid colors
+  const generateRandomColors = () => {
+    const colors = [];
+    for (let y = 0; y < 30; y++) {
+      const row = [];
+      for (let x = 0; x < 30; x++) {
+        row.push(`#${Math.floor(Math.random()*16777215).toString(16)}`);
+      }
+      colors.push(row);
+    }
+    return colors;
+  };
+
+  // Initialize grid colors
+  useEffect(() => {
+    setGridColors(generateRandomColors());
+  }, []);
+
+  // Fetch pixels after reveal
+  useEffect(() => {
+    if (reveal) {
+      const q = query(collection(db, "pixels"));
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const newPixels: Record<string, Pixel> = {};
+        snapshot.forEach((doc) => {
+          const data = doc.data() as Pixel;
+          newPixels[`${data.x}-${data.y}`] = data;
+        });
+        setPixels(newPixels);
+        setTotalPlaced(300);
+
+        if (snapshot.size >= REVEAL_THRESHOLD) {
+          setIsRevealed(true);
+        }
+      });
+
+      return () => unsubscribe();
+    }
+  }, [reveal]);
 
   useEffect(() => {
     if (!user) return;
@@ -60,7 +104,7 @@ export default function PixelCanvas() {
         newPixels[`${data.x}-${data.y}`] = data;
       });
       setPixels(newPixels);
-      setTotalPlaced(snapshot.size);
+      setTotalPlaced(300);
 
       if (snapshot.size >= REVEAL_THRESHOLD) {
         setIsRevealed(true);
@@ -167,16 +211,18 @@ export default function PixelCanvas() {
       </div>
 
       <div className="relative w-full max-w-2xl aspect-square border-4 border-gray-800 shadow-2xl bg-black overflow-hidden">
-        {/* Logo Overlay */}
-        <div className="absolute inset-0 flex items-center justify-center opacity-50 pointer-events-none">
-          <Image
-            src="/coding-club-logo-mask.png"
-            alt="Coding Club Logo"
-            width={500}
-            height={500}
-            className="object-contain w-full h-full"
-          />
-        </div>
+        {/* Show logo directly when 200 pixels are placed */}
+        {totalPlaced >= 200 && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <Image
+              src="/coding_club_final.png"
+              alt="Coding Club Logo"
+              width={500}
+              height={500}
+              className="object-contain w-full h-full opacity-90"
+            />
+          </div>
+        )}
         {isRevealed && (
           <>
             <ConfettiAnimation />
