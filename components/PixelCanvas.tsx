@@ -26,7 +26,7 @@ type Pixel = {
   timestamp: Timestamp;
 };
 
-const GRID_SIZE = 32;
+const GRID_SIZE = 24;
 const TOTAL_PIXELS = GRID_SIZE * GRID_SIZE;
 const REVEAL_THRESHOLD = 300;
 
