@@ -28,7 +28,7 @@ type Pixel = {
 
 const GRID_SIZE = 24;
 const TOTAL_PIXELS = GRID_SIZE * GRID_SIZE;
-const REVEAL_THRESHOLD = 300;
+const REVEAL_THRESHOLD = 200;
 
 export default function PixelCanvas() {
   const [pixels, setPixels] = useState<Record<string, Pixel>>({});
@@ -42,6 +42,29 @@ export default function PixelCanvas() {
   const [totalPlaced, setTotalPlaced] = useState(0);
   const [audienceCount, setAudienceCount] = useState(0);
   const [isRevealed, setIsRevealed] = useState(false);
+  const [animationFrame, setAnimationFrame] = useState(0);
+  
+  // Animate colors over time
+  useEffect(() => {
+    if (!isRevealed) return;
+    
+    const animate = () => {
+      setAnimationFrame(prev => (prev + 0.005) % (2 * Math.PI));
+      requestAnimationFrame(animate);
+    };
+    
+    const animationId = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(animationId);
+  }, [isRevealed]);
+  interface GlowColor {
+    base: string;
+    light: string;
+    lighter: string;
+    shadow: string;
+    nextHue: number;
+  }
+
+  const [glowCells, setGlowCells] = useState<{index: number, color: GlowColor}[]>([]);
 
   // Generate random grid colors
   const generateRandomColors = () => {
@@ -56,9 +79,57 @@ export default function PixelCanvas() {
     return colors;
   };
 
-  // Initialize grid colors
+  // Initialize grid colors and generate random glow cells
   useEffect(() => {
     setGridColors(generateRandomColors());
+    
+    // Generate random glow cells for top and bottom 3 rows
+    const newGlowCells: {index: number, color: GlowColor}[] = [];
+    
+    // Helper function to generate random color with next target hue
+    const getRandomColor = () => {
+      const hue = Math.floor(Math.random() * 360);
+      return {
+        base: `hsl(${hue}, 80%, 60%)`,
+        light: `hsla(${hue}, 80%, 60%, 0.3)`,
+        lighter: `hsla(${hue}, 80%, 60%, 0.2)`,
+        shadow: `hsla(${hue}, 80%, 60%, 0.8)`,
+        nextHue: (hue + 30 + Math.floor(Math.random() * 3000)) % 360
+      };
+    };
+    
+    // Add all cells from top 3 rows (0-2)
+    for (let row = 0; row < 3; row++) {
+      for (let col = 0; col < GRID_SIZE; col++) {
+        const index = row * GRID_SIZE + col;
+        newGlowCells.push({
+          index,
+          color: getRandomColor()
+        });
+      }
+    }
+    
+    // Add all cells from bottom 3 rows
+    for (let row = GRID_SIZE - 3; row < GRID_SIZE; row++) {
+      for (let col = 0; col < GRID_SIZE; col++) {
+        const index = row * GRID_SIZE + col;
+        newGlowCells.push({
+          index,
+          color: getRandomColor()
+        });
+      }
+    }
+    
+    setGlowCells(newGlowCells);
+    
+    // Start the reveal animation after a short delay
+    const timer = setTimeout(() => {
+      setIsAnimating(true);
+      // Start the reveal after animation completes
+      setTimeout(() => setReveal(true), 2000);
+    }, 1000);
+    
+    return () => clearTimeout(timer);
   }, []);
 
   // Fetch pixels after reveal
@@ -72,7 +143,7 @@ export default function PixelCanvas() {
           newPixels[`${data.x}-${data.y}`] = data;
         });
         setPixels(newPixels);
-        setTotalPlaced(300);
+        setTotalPlaced(snapshot.size);
 
         if (snapshot.size >= REVEAL_THRESHOLD) {
           setIsRevealed(true);
@@ -104,7 +175,7 @@ export default function PixelCanvas() {
         newPixels[`${data.x}-${data.y}`] = data;
       });
       setPixels(newPixels);
-      setTotalPlaced(300);
+      setTotalPlaced(snapshot.size);
 
       if (snapshot.size >= REVEAL_THRESHOLD) {
         setIsRevealed(true);
@@ -211,9 +282,9 @@ export default function PixelCanvas() {
       </div>
 
       <div className="relative w-full max-w-2xl aspect-square border-4 border-gray-800 shadow-2xl bg-black overflow-hidden">
-        {/* Show logo directly when 200 pixels are placed */}
+        {/* Show logo when 200 pixels are placed */}
         {totalPlaced >= 200 && (
-          <div className="absolute inset-0 flex items-center justify-center">
+          <div className="absolute inset-0 flex items-center justify-center z-20">
             <Image
               src="/coding_club_final.png"
               alt="Coding Club Logo"
@@ -253,23 +324,70 @@ export default function PixelCanvas() {
             )}
             style={canvasStyle}
           >
-          {[...Array(GRID_SIZE * GRID_SIZE)].map((_, i) => {
-            const x = i % GRID_SIZE;
-            const y = Math.floor(i / GRID_SIZE);
-            const pixel = pixels[`${x}-${y}`];
-            return (
-              <PixelCell
-                key={i}
-                x={x}
-                y={y}
-                color={pixel?.color || ""}
-                isPlaced={!!pixel}
-                onClick={handlePlacePixel}
-                disabled={placedPixel || authLoading}
-                selectedColor={selectedColor}
-              />
-            );
-          })}
+          {totalPlaced < 200 ? (
+            // Show grid before reveal
+            [...Array(GRID_SIZE * GRID_SIZE)].map((_, i) => {
+              const x = i % GRID_SIZE;
+              const y = Math.floor(i / GRID_SIZE);
+              const pixel = pixels[`${x}-${y}`];
+              return (
+                <PixelCell
+                  key={i}
+                  x={x}
+                  y={y}
+                  color={pixel?.color || ""}
+                  isPlaced={!!pixel}
+                  onClick={handlePlacePixel}
+                  disabled={placedPixel || authLoading}
+                  selectedColor={selectedColor}
+                />
+              );
+            })
+          ) : (
+            // After reveal, show empty cells with colored glow in top and bottom 3 rows
+            [...Array(GRID_SIZE * GRID_SIZE)].map((_, i) => {
+              const x = i % GRID_SIZE;
+              const y = Math.floor(i / GRID_SIZE);
+              const pixel = pixels[`${x}-${y}`];
+              const glowCell = glowCells.find(cell => cell.index === i);
+              const glowColor = glowCell?.color;
+              return (
+                <div 
+                  key={i} 
+                  className={`aspect-square border border-gray-800/30 relative overflow-visible`}
+                >
+                  {(glowColor || pixel?.color) && (
+                    <>
+                      {/* Base glow layer */}
+                      <div 
+                        className="absolute inset-0 rounded-sm"
+                        style={{
+                          backgroundColor: pixel?.color || glowColor?.base || 'transparent',
+                          opacity: 0.8,
+                          transition: 'all 0.3s ease-in-out',
+                          animation: (pixel?.color || glowColor) ? 'pulse 2s infinite' : 'none',
+                          animationDelay: (pixel?.color || glowColor) ? `${(i % 10) * 0.1}s` : '0s'
+                        }}
+                      />
+                      {/* Outer glow layer */}
+                      <div 
+                        className="absolute inset-0 rounded-sm"
+                        style={{
+                          backgroundColor: pixel?.color || glowColor?.base || 'transparent',
+                          opacity: 0.6,
+                          boxShadow: (pixel?.color || glowColor) 
+                            ? `0 0 15px 5px ${pixel?.color || glowColor?.base}` 
+                            : 'none',
+                          filter: 'blur(3px)',
+                          transition: 'all 0.3s ease-in-out'
+                        }}
+                      />
+                    </>
+                  )}
+                </div>
+              );
+            })
+          )}
         </div>
         </div>
       </div>
