@@ -190,13 +190,23 @@ export default function PixelCanvas() {
             </div>
           </>
         )}
-        <div
-          className={cn(
-            "grid w-full h-full relative z-20",
-            isRevealed && "opacity-0 transition-opacity duration-1000"
-          )}
-          style={canvasStyle}
-        >
+        <div className="relative w-full h-full">
+          {/* Canvas Glow Effect */}
+          <div 
+            className="absolute inset-0 -m-4 z-10 opacity-70"
+            style={{
+              background: 'radial-gradient(circle at center, rgba(59, 130, 246, 0.15) 0%, transparent 70%)',
+              filter: 'blur(16px)',
+              pointerEvents: 'none',
+            }}
+          />
+          <div
+            className={cn(
+              "grid w-full h-full relative z-20",
+              isRevealed && "opacity-0 transition-opacity duration-1000"
+            )}
+            style={canvasStyle}
+          >
           {[...Array(GRID_SIZE * GRID_SIZE)].map((_, i) => {
             const x = i % GRID_SIZE;
             const y = Math.floor(i / GRID_SIZE);
@@ -213,6 +223,7 @@ export default function PixelCanvas() {
               />
             );
           })}
+        </div>
         </div>
       </div>
       {placedPixel && (

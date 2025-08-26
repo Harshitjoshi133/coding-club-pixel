@@ -5,7 +5,7 @@ type ColorPickerProps = {
   onSelectColor: (color: string) => void;
 };
 
-const colors = ["#ef4444", "#f97316", "#f59e0b", "#eab308", "#22c55e", "#10b981", "#0ea5e9", "#6366f1", "#8b5cf6", "#d946ef", "#ec4899", "#f43f5e", "#000000", "#ffffff"];
+const colors = ["#ef4444", "#f59e0b", "#22c55e", "#0ea5e9", "#8b5cf6", "#ec4899"];
 
 export default function ColorPicker({ selectedColor, onSelectColor }: ColorPickerProps) {
   return (

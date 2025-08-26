@@ -27,9 +27,9 @@ export default function PixelCell({
     if (!isPlaced) return;
     
     const interval = setInterval(() => {
-      // Random glow intensity between 0.5 and 0.9
-      setGlow(0.5 + Math.random() * 0.4);
-    }, 100 + Math.random() * 400); // Random interval between 100-500ms
+      // Wider range for more dramatic effect
+      setGlow(0.6 + Math.random() * 0.8);
+    }, 50 + Math.random() * 200); // Faster and more frequent flickering
     
     return () => clearInterval(interval);
   }, [isPlaced]);
@@ -47,16 +47,17 @@ export default function PixelCell({
         backgroundColor: isPlaced ? `${color}E6` : 'transparent',
         transition: 'all 0.3s ease',
         boxShadow: isPlaced 
-          ? `0 0 12px 2px ${color}${Math.floor(glow * 255).toString(16).padStart(2, '0')}` 
+          ? `0 0 20px 4px ${color}${Math.floor(glow * 255).toString(16).padStart(2, '0')}, 0 0 30px 10px ${color}40` 
           : '0 0 0 1px rgba(255, 255, 255, 0.03)',
         position: 'relative',
+        zIndex: isPlaced ? 1 : 0,
       }}
     >
-      {/* Simple white grid line */}
+      {/* Simple grid line */}
       <div 
         className="absolute inset-0 pointer-events-none"
         style={{
-          boxShadow: 'inset 0 0 0 1px rgba(255, 255, 255, 1)',
+          boxShadow: 'inset 0 0 0 1px rgba(255, 255, 255, 0.1)',
         }}
       />
       {/* Glow effect on hover */}
