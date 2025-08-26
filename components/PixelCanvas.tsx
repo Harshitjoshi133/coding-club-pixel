@@ -26,7 +26,7 @@ type Pixel = {
   timestamp: Timestamp;
 };
 
-const GRID_SIZE = 64;
+const GRID_SIZE = 32;
 const TOTAL_PIXELS = GRID_SIZE * GRID_SIZE;
 const REVEAL_THRESHOLD = 300;
 
@@ -142,11 +142,13 @@ export default function PixelCanvas() {
   };
 
   return (
-    <main className="flex flex-col items-center justify-center p-8 bg-gray-50 min-h-screen">
-      <h1 className="text-4xl font-bold mb-4 text-center">Pixel Canvas Club</h1>
-      <p className="text-lg text-gray-600 mb-6 text-center">
-        Place your one pixel to help reveal the hidden logo!
-      </p>
+    <main className="flex flex-col items-center justify-center p-8 bg-black min-h-screen">
+      <div className="relative z-10 text-center mb-6">
+        <h1 className="text-4xl font-bold mb-2 text-white">Pixel Canvas Club</h1>
+        <p className="text-lg text-gray-300">
+          Place your one pixel to help reveal the hidden logo!
+        </p>
+      </div>
       
       <div className="flex justify-center gap-8 mb-6">
         <div className="text-xl font-medium">
@@ -164,7 +166,17 @@ export default function PixelCanvas() {
         />
       </div>
 
-      <div className="relative w-full max-w-2xl aspect-square border-4 border-black shadow-lg bg-gray-300">
+      <div className="relative w-full max-w-2xl aspect-square border-4 border-gray-800 shadow-2xl bg-gray-900 overflow-hidden">
+        {/* Logo Overlay */}
+        <div className="absolute inset-0 flex items-center justify-center opacity-90 pointer-events-none">
+          <Image
+            src="/coding-club-logo-mask.png"
+            alt="Coding Club Logo"
+            width={500}
+            height={500}
+            className="object-contain w-full h-full"
+          />
+        </div>
         {isRevealed && (
           <>
             <ConfettiAnimation />

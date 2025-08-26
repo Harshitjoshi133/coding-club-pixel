@@ -1,3 +1,92 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  --foreground-rgb: 220, 220, 220;
+  --background-start-rgb: 17, 24, 39;
+  --background-end-rgb: 31, 41, 55;
+}
+
+* {
+  @apply border-slate-700;
+}
+
+html {
+  @apply bg-slate-900;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: linear-gradient(
+      to bottom,
+      transparent,
+      rgb(var(--background-end-rgb))
+    )
+    rgb(var(--background-start-rgb));
+  min-height: 100vh;
+}
+
+/* Custom glow effect */
+.glow {
+  text-shadow: 0 0 10px rgba(139, 92, 246, 0.7);
+  transition: text-shadow 0.3s ease;
+  animation: flicker 2s infinite;
+}
+
+.glow:hover {
+  text-shadow: 0 0 20px rgba(167, 139, 250, 0.9);
+}
+
+@keyframes flicker {
+  0%, 100% {
+    opacity: 0.9;
+    filter: drop-shadow(0 0 8px currentColor) brightness(1.1);
+  }
+  25% {
+    opacity: 0.8;
+    filter: drop-shadow(0 0 10px currentColor) brightness(1.15);
+  }
+  50% {
+    opacity: 1;
+    filter: drop-shadow(0 0 6px currentColor) brightness(1.05);
+  }
+  75% {
+    opacity: 0.85;
+    filter: drop-shadow(0 0 12px currentColor) brightness(1.2);
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgb(15, 23, 42);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #8b5cf6;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #7c3aed;
+}
+
+/* Force dark mode on all elements */
+:root, body, html {
+  color-scheme: dark;
+  @apply bg-slate-900 text-slate-100;
+}
+
+/* Remove any white backgrounds */
+.bg-white, .bg-gray-50, .bg-gray-100, .bg-slate-50, .bg-slate-100 {
+  @apply bg-slate-800;
+}
+
+/* Darken text for better contrast */
+.text-gray-600, .text-gray-700, .text-slate-600, .text-slate-700 {
+  @apply text-slate-300;
+}
