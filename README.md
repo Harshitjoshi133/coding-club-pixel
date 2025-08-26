@@ -1,9 +1,1 @@
-
-  NEXT_PUBLIC_FIREBASE_API_KEY=AIzaSyC_WIoXWA5bTenyaL95pK9fXaSc357oUMw
-  NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=coding-club-8e473.firebaseapp.com
-  NEXT_PUBLIC_FIREBASE_DATABASE_URL=https://coding-club-8e473-default-rtdb.firebaseio.com
-  NEXT_PUBLIC_FIREBASE_PROJECT_ID=coding-club-8e473
-  NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=coding-club-8e473.firebasestorage.app
-  NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=1057159970794
-  appId: "1:1057159970794:web:727b6fe71f39b58c93fc93",
-    measurementId: "G-EEKY1HBZTV"# coding-club-pixel
+Hello world
