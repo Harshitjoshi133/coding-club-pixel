@@ -28,7 +28,7 @@ type Pixel = {
 
 const GRID_SIZE = 24;
 const TOTAL_PIXELS = GRID_SIZE * GRID_SIZE;
-const REVEAL_THRESHOLD = 11;
+const REVEAL_THRESHOLD = 17;
 
 export default function PixelCanvas() {
   const [pixels, setPixels] = useState<Record<string, Pixel>>({});
@@ -47,6 +47,7 @@ export default function PixelCanvas() {
   const [showQuote, setShowQuote] = useState(false);
   const [showLoader, setShowLoader] = useState(false);
   const [showGlow, setShowGlow] = useState(false);
+  const [isPlacingPixel, setIsPlacingPixel] = useState(false);
   const quoteTimeout = useRef<NodeJS.Timeout>();
   
   // Animate colors over time
@@ -346,8 +347,9 @@ useEffect(() => {
 }, [showLoader, totalPlaced, showRandomQuote]);
 
 const handlePlacePixel = async (x: number, y: number) => {
-  if (!user || placedPixel || authLoading) return;
+  if (!user || placedPixel || authLoading || isPlacingPixel) return;
   try {
+    setIsPlacingPixel(true);
     const res = await fetch("/api/place-pixel", {
       method: "POST",
       headers: {
@@ -371,6 +373,8 @@ const handlePlacePixel = async (x: number, y: number) => {
   } catch (error) {
     console.error("Failed to place pixel:", error);
     alert("Failed to place pixel. Please try again.");
+  } finally {
+    setIsPlacingPixel(false);
   }
 };
 
@@ -452,6 +456,15 @@ return (
               />
             </div>
           </>
+        )}
+        {/* Pixel Placement Loader */}
+        {isPlacingPixel && (
+          <div className="absolute inset-0 flex items-center justify-center z-20 bg-black/80 backdrop-blur-sm">
+            <div className="relative w-16 h-16">
+              <div className="absolute inset-0 rounded-full border-4 border-t-transparent border-blue-400 animate-spin"></div>
+              <div className="absolute inset-2 rounded-full border-4 border-t-transparent border-pink-400 animate-spin" style={{ animationDirection: 'reverse' }}></div>
+            </div>
+          </div>
         )}
         <div className="relative w-full h-full">
           {/* Canvas Glow Effect */}
