@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   collection,
   onSnapshot,
@@ -161,13 +161,17 @@ export default function PixelCanvas() {
   useEffect(() => {
     if (!user) return;
     const userDocRef = doc(db, "users", user.uid);
-    const checkUserStatus = async () => {
+    // Check if user has already placed a pixel
+    const checkUserPixelStatus = async () => {
+      if (!user) return;
+      const userDocRef = doc(db, "users", user.uid);
       const userDocSnap = await getDoc(userDocRef);
-      if (userDocSnap.exists() && userDocSnap.data().hasPlaced) {
+      if (userDocSnap.exists() && userDocSnap.data()?.hasPlaced) {
         setPlacedPixel(true);
       }
     };
-    checkUserStatus();
+  
+    checkUserPixelStatus();
   }, [user]);
 
   useEffect(() => {
@@ -222,145 +226,195 @@ export default function PixelCanvas() {
     return () => {
       // Set user as offline when they leave
       setDoc(userStatusRef, isOfflineForDatabase);
-      statusUnsubscribe();
+      if (statusUnsubscribe) statusUnsubscribe();
     };
   }, [user]);
 
-  const quotes = [
-    "Creating something beautiful...",
-    "Unleashing creativity...",
-    "Pixel by pixel, art comes to life...",
-  ];
-
-  const showRandomQuote = () => {
-    let currentIndex = 0;
-    
-    const showNextQuote = () => {
-      if (currentIndex >= quotes.length) {
-        setShowQuote(false);
-        // Reset for next cycle
-        quoteTimeout.current = setTimeout(showRandomQuote, 3000);
-        return;
-      }
-      
-      setCurrentQuote(quotes[currentIndex]);
-      setShowQuote(true);
-      currentIndex++;
-      
-      // Show next quote after 1 second
-      quoteTimeout.current = setTimeout(showNextQuote, 2000);
-    };
-  
-    // Clear any existing timeouts
-    if (quoteTimeout.current) {
-      clearTimeout(quoteTimeout.current);
-    }
-    
-    showNextQuote();
-  };
-  
-  // Show loader and quotes until REVEAL_THRESHOLD is reached
   useEffect(() => {
-    if (showLoader) {
-      showRandomQuote();
-      
-      // Check if we've already reached the threshold
-      if (totalPlaced >= REVEAL_THRESHOLD) {
-        setShowQuote(false);
-        setTimeout(() => {
-          setShowLoader(false);
-          setIsRevealed(true);
-        }, 300);
-        if (quoteTimeout.current) clearTimeout(quoteTimeout.current);
-        return;
-      }
-      
-      // If not at threshold yet, check periodically
-      const checkThreshold = setInterval(() => {
-        if (totalPlaced >= REVEAL_THRESHOLD) {
-          setShowQuote(false);
-          setTimeout(() => {
-            setShowLoader(false);
-            setIsRevealed(true);
-          }, 300);
-          if (quoteTimeout.current) clearTimeout(quoteTimeout.current);
-          clearInterval(checkThreshold);
-        }
-      }, 1000);
-      
-      return () => {
-        clearInterval(checkThreshold);
-        if (quoteTimeout.current) clearTimeout(quoteTimeout.current);
-      };
-    }
-  }, [showLoader, totalPlaced]);
-
-  const handlePlacePixel = async (x: number, y: number) => {
-    if (!user || placedPixel || authLoading) return;
-    try {
-      const res = await fetch("/api/place-pixel", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          x,
-          y,
-          color: selectedColor,
-          userId: user.uid,
-        }),
+    const q = query(collection(db, "pixels"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const newPixels: Record<string, Pixel> = {};
+      snapshot.forEach((doc) => {
+        const data = doc.data() as Pixel;
+        newPixels[`${data.x}-${data.y}`] = data;
       });
+      setPixels(newPixels);
+      setTotalPlaced(snapshot.size);
 
-      if (res.ok) {
-        setPlacedPixel(true);
-      } else {
-        const errorData = await res.json();
-        console.log(errorData);
-        alert(errorData.error);
+      if (snapshot.size >= REVEAL_THRESHOLD) {
+        setIsRevealed(true);
       }
-    } catch (error) {
-      console.error("Failed to place pixel:", error);
-      alert("Failed to place pixel. Please try again.");
+
+    if (snapshot.size >= REVEAL_THRESHOLD) {
+      setIsRevealed(true);
+    }
+  });
+
+  return () => unsubscribe();
+}, []);
+
+useEffect(() => {
+  // Track active users
+  const presenceRef = doc(db, "presence", "activeUsers");
+  const userId = user?.uid || `anonymous-${Math.random().toString(36).substr(2, 9)}`;
+
+  // Set up presence
+  const userStatusDatabaseRef = doc(db, "status", userId);
+  const isOfflineForDatabase = {
+    state: 'offline',
+    last_changed: Timestamp.now(),
+  };
+
+  const isOnlineForDatabase = {
+    state: 'online',
+    last_changed: Timestamp.now(),
+  };
+
+  // Set up user's online status
+  const userStatusRef = doc(db, "status", userId);
+  setDoc(userStatusRef, isOnlineForDatabase);
+
+  // Update audience count when status changes
+  const statusQuery = collection(db, "status");
+  const statusUnsubscribe = onSnapshot(statusQuery, (snapshot) => {
+    const onlineUsers = snapshot.docs.filter(doc => doc.data().state === 'online');
+    // Cap at 200 as requested
+    setAudienceCount(Math.min(onlineUsers.length, 200));
+  });
+
+  // Cleanup function
+  return () => {
+    // Set user as offline when they leave
+    setDoc(userStatusRef, isOfflineForDatabase);
+    statusUnsubscribe();
+  };
+}, [user]);
+
+const quotes = [
+  "Unlocking creativity, one pixel at a time..."
+];
+
+const showRandomQuote = useCallback(() => {
+  if (quotes.length === 0) return;
+
+  // Get a random quote that's different from the current one
+  let newQuote;
+  do {
+    newQuote = quotes[Math.floor(Math.random() * quotes.length)];
+  } while (newQuote === currentQuote && quotes.length > 1);
+
+  setCurrentQuote(newQuote);
+  setShowQuote(true);
+
+  // Schedule next quote in 4-6 seconds
+  const nextQuoteDelay = 2000;
+  quoteTimeout.current = setTimeout(showRandomQuote, nextQuoteDelay);
+}, [currentQuote, quotes, quoteTimeout]);
+
+// Show loader and quotes with smooth transition
+useEffect(() => {
+  if (!showLoader) {
+    if (quoteTimeout.current) clearTimeout(quoteTimeout.current);
+    return;
+  }
+
+  // Start showing quotes
+  showRandomQuote();
+
+  const checkThreshold = () => {
+    if (totalPlaced >= REVEAL_THRESHOLD) {
+      // Show final state for at least 1 second before hiding
+      setShowQuote(false);
+      setTimeout(() => {
+        setShowLoader(false);
+        setIsRevealed(true);
+      }, 1000);
+
+      if (quoteTimeout.current) clearTimeout(quoteTimeout.current);
+    } else {
+      // Schedule next check
+      quoteTimeout.current = setTimeout(checkThreshold, 1000);
     }
   };
 
-  const canvasStyle = {
-    gridTemplateColumns: `repeat(${GRID_SIZE}, minmax(0, 1fr))`,
-    gridTemplateRows: `repeat(${GRID_SIZE}, minmax(0, 1fr))`,
+  // Initial check after 1 second
+  quoteTimeout.current = setTimeout(checkThreshold, 1000);
+
+  return () => {
+    if (quoteTimeout.current) clearTimeout(quoteTimeout.current);
   };
+}, [showLoader, totalPlaced, showRandomQuote]);
 
-  return (
-    <main className="flex flex-col items-center justify-center p-8 bg-black min-h-screen">
-      <div className="relative z-10 text-center mb-6">
-        <h1 className="text-4xl font-bold mb-2 text-white">Pixel Canvas Club</h1>
-        <p className="text-lg text-gray-300">
-          Place your one pixel to help reveal the hidden logo!
-        </p>
-      </div>
-      
-      <div className="flex justify-center gap-8 mb-6">
-        <div className="text-xl font-medium">
-          Pixels Placed: <span className="text-primary font-bold">{totalPlaced}</span>
-        </div>
-        <div className="text-xl font-medium">
-          Audience: <span className="text-blue-600 font-bold">{audienceCount}</span> 
-        </div>
-      </div>
+const handlePlacePixel = async (x: number, y: number) => {
+  if (!user || placedPixel || authLoading) return;
+  try {
+    const res = await fetch("/api/place-pixel", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        x,
+        y,
+        color: selectedColor,
+        userId: user.uid,
+      }),
+    });
 
-      <div className="mb-6">
-        <ColorPicker
-          selectedColor={selectedColor}
-          onSelectColor={setSelectedColor}
-        />
-      </div>
+    if (res.ok) {
+      setPlacedPixel(true);
+    } else {
+      const errorData = await res.json();
+      console.log(errorData);
+      alert(errorData.error);
+    }
+  } catch (error) {
+    console.error("Failed to place pixel:", error);
+    alert("Failed to place pixel. Please try again.");
+  }
+};
 
-      <div className="relative w-full max-w-2xl aspect-square border-4 border-gray-800 shadow-2xl bg-black overflow-hidden transition-all duration-500 ease-in-out">
-        {/* Show loader and quotes with smooth transition */}
-        <div className={`absolute inset-0 flex flex-col items-center justify-center z-10 bg-black/80 backdrop-blur-sm transition-opacity duration-500 ${showLoader ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-          {showLoader && (
-          <div className="flex flex-col items-center justify-center">
-            <div className="relative w-20 h-20 mb-6 transform transition-all duration-500 hover:scale-110">
-              <div className="absolute inset-0 rounded-full border-4 border-t-transparent border-blue-400 animate-spin" style={{ animationDuration: '1.5s' }}></div>
+const canvasStyle = {
+  gridTemplateColumns: `repeat(${GRID_SIZE}, minmax(0, 1fr))`,
+  gridTemplateRows: `repeat(${GRID_SIZE}, minmax(0, 1fr))`,
+};
+
+return (
+  <main className="flex flex-col items-center justify-center p-8 bg-black min-h-screen">
+    <div className="relative z-10 text-center mb-6">
+      <h1 className="text-4xl font-bold mb-2 text-white">Pixel Canvas Club</h1>
+      <p className="text-lg text-gray-300">
+        Place your one pixel to help reveal the hidden logo!
+      </p>
+    </div>
+
+    <div className="flex justify-center gap-8 mb-6">
+      <div className="text-xl font-medium">
+        Pixels Placed: <span className="text-primary font-bold">{totalPlaced}</span>
+      </div>
+      <div className="text-xl font-medium">
+        Audience: <span className="text-blue-600 font-bold">{audienceCount}</span> 
+      </div>
+    </div>
+
+    <div className="mb-6">
+      <ColorPicker
+        selectedColor={selectedColor}
+        onSelectColor={setSelectedColor}
+      />
+    </div>
+
+    <div className="relative w-full max-w-2xl aspect-square border-4 border-gray-800 shadow-2xl bg-black overflow-hidden transition-all duration-500 ease-in-out">
+      {/* Show loader and quotes with smooth transition */}
+      <div className={`absolute inset-0 flex flex-col items-center justify-center z-10 bg-black/80 backdrop-blur-sm transition-opacity duration-500 ${showLoader ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+        {showLoader && (
+          <div className="flex flex-col items-center justify-center p-6 text-center">
+            <div className="relative w-24 h-24 mb-6 transform transition-all duration-500 hover:scale-110">
+              <div className="absolute inset-0 rounded-full border-4 border-t-transparent border-blue-400 animate-spin" style={{ animationDuration: '3s' }}></div>
+              <div className="absolute inset-0 rounded-full border-4 border-t-transparent border-pink-400 animate-spin" style={{ animationDuration: '4s', animationDirection: 'reverse' }}></div>
+              <div className="absolute inset-2 rounded-full border-4 border-t-transparent border-purple-400 animate-spin" style={{ animationDuration: '5s' }}></div>
+              <div className="absolute inset-0 rounded-full border-4 border-t-transparent border-pink-400 animate-spin" style={{ animationDuration: '4s', animationDirection: 'reverse' }}></div>
+              <div className="absolute inset-2 rounded-full border-4 border-t-transparent border-purple-400 animate-spin" style={{ animationDuration: '5s' }}></div>
               <div className="absolute inset-1 rounded-full border-4 border-t-transparent border-pink-400 animate-spin" style={{ animationDuration: '2s', animationDirection: 'reverse' }}></div>
               <div className="absolute inset-2 rounded-full border-4 border-t-transparent border-purple-400 animate-spin" style={{ animationDuration: '2.5s' }}></div>
               <div className="absolute inset-3 rounded-full border-4 border-t-transparent border-white/30 animate-ping" style={{ animationDuration: '3s' }}></div>
