@@ -28,7 +28,7 @@ type Pixel = {
 
 const GRID_SIZE = 24;
 const TOTAL_PIXELS = GRID_SIZE * GRID_SIZE;
-const REVEAL_THRESHOLD = 17;
+const REVEAL_THRESHOLD = 220;
 
 export default function PixelCanvas() {
   const [pixels, setPixels] = useState<Record<string, Pixel>>({});
