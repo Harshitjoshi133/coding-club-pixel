@@ -386,9 +386,9 @@ const canvasStyle = {
 return (
   <main className="flex flex-col items-center justify-center p-8 bg-black min-h-screen">
     <div className="relative z-10 text-center mb-6">
-      <h1 className="text-4xl font-bold mb-2 text-white">Pixel Canvas Club</h1>
+      <h1 className="text-4xl font-bold mb-2 text-white">Coding Club Pixel Canvas</h1>
       <p className="text-lg text-gray-300">
-        Place your one pixel to help reveal the hidden logo!
+      Drop a pixel, code your mark, reveal the digital art! 💻
       </p>
     </div>
 
